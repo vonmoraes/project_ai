@@ -26,6 +26,7 @@ public class EditorExample : EditorWindow
 
         if (GUILayout.Button("Execute"))
             Execute();
+
     }
 
     void Execute()
