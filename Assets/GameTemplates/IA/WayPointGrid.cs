@@ -1,5 +1,7 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using UnityEditorInternal.Profiling.Memory.Experimental;
 using UnityEngine;
 
 public class WayPointGrid : MonoBehaviour
@@ -11,10 +13,20 @@ public class WayPointGrid : MonoBehaviour
 
     public Vector3[,] VertexPositions = null; // SEMPRE A DISTÂNCIA ENTRE OS VERTEX - PESO
     public bool[,] VertexAvailability = null;
+    public int[,] AdjacenceMatrix = null; // EU CRIEI
 
     public Transform WayPointPrefab;
 
     static WayPointGrid gInstance = null;
+
+
+    // TEM EM OUTRO CODIGO DO FESSO
+    public float[,] edgesWeight = null;
+    public bool showEdgesGizmo = true;
+
+
+    // TEM UM METODO CHAMADO UPDATEGRIDNAVICATION
+    // TEM EM OUTRO CODIGO DO FESSO
 
     public static WayPointGrid GetInstance()
     {
@@ -31,6 +43,9 @@ public class WayPointGrid : MonoBehaviour
         // LOAD THE GRID
     }
 
+    /**
+     * Cria a matriz de posições dos vértices
+     * */
     public void CreateWaypointGrid(int gridSize, float distanceBetweenVertices)
     {
         Transform gridEditorAux = transform.GetChild(0);
@@ -39,6 +54,13 @@ public class WayPointGrid : MonoBehaviour
         GridSize = gridSize;
         VertexPositions = new Vector3[GridSize, GridSize];
         VertexAvailability = new bool[GridSize, GridSize];
+        AdjacenceMatrix = new int[GridSize, GridSize]; // EU
+        // OUTRO COD
+        edgesWeight = new float[GridSize, GridSize];
+
+
+
+        //OUTRO COD
 
         // Calculate Start Position based an it's center
         float offset = gridSize * distanceBetweenVertices * 0.5f;
@@ -53,6 +75,19 @@ public class WayPointGrid : MonoBehaviour
             {
                 VertexPositions[x, z] = currentPosition + transform.position;
                 VertexAvailability[x, z] = true;
+                //AdjacenceMatrix[x, z] = 0;
+
+                // OUTRO COD
+                if (x == z)
+                {
+                    edgesWeight[x, z] = 0f;
+                }
+                else
+                {
+                    edgesWeight[x, z] = DistanceBetweenVertices;
+                }
+                // OUTRO COD
+
 
                 currentPosition.x += distanceBetweenVertices;
 
@@ -77,11 +112,14 @@ public class WayPointGrid : MonoBehaviour
         }
     }
 
+   
+
     public void UpateWayPointVertex()
     {
         // UPDATE VERTEX COLLISION AND HEIGHT
     }
 
+    // posição do vértice
     public void UpdateVertexPosition(int index, Vector3 position)
     {
         if (VertexPositions == null)
@@ -93,6 +131,7 @@ public class WayPointGrid : MonoBehaviour
         VertexPositions[xIndex, zIndex] = position;
     }
 
+    // se um vertice esta ativado ou não
     public void UpdateVertexAvailability(int index, bool enabled)
     {
         if (VertexAvailability == null)
@@ -140,16 +179,6 @@ public class WayPointGrid : MonoBehaviour
         if (VertexPositions == null)
             return;
 
-        Gizmos.color = Color.white;
-
-        for (int x = 0; x < GridSize; x++)
-        {
-            for (int z = 0; z < GridSize; z++)
-            {
-                // TODO Show Edges
-            }
-        }
-
         // Draw Vertices
         Gizmos.color = Color.yellow;
         for (int x = 0; x < GridSize; x++)
@@ -160,5 +189,103 @@ public class WayPointGrid : MonoBehaviour
                     Gizmos.DrawSphere(transform.position + VertexPositions[x, z], 0.25f);
             }
         }
+
+
+        // Draw Edges
+        Gizmos.color = Color.white;
+        // HORIZONTAL
+        for (int x = 0; x < GridSize; x++)
+        {
+            for (int z = 0; z < GridSize; z++)
+            {
+                try
+                {
+                    if (VertexAvailability[x, z] && VertexAvailability[x + 1, z])
+                    {
+                        Vector3 a = transform.position + VertexPositions[x, z];
+                        Vector3 b = transform.position + VertexPositions[x + 1, z];
+                        Gizmos.DrawLine(a, b);
+                    }
+                }
+                catch (IndexOutOfRangeException)
+                {
+                    z = GridSize;
+                }
+
+            }
+        }
+
+        // VERTICAL
+        for (int x = 0; x < GridSize; x++)
+        {
+            for (int z = 0; z < GridSize; z++)
+            {
+                try
+                {
+                    if (VertexAvailability[x, z] && VertexAvailability[x, z + 1])
+                    {
+                        Vector3 a = transform.position + VertexPositions[x, z];
+                        Vector3 b = transform.position + VertexPositions[x, z + 1];
+                        Gizmos.DrawLine(a, b);
+                    }
+                }
+                catch (IndexOutOfRangeException)
+                {
+                    z = GridSize;
+                }
+            }
+        }
+
+        //// DIAGONAIS
+        //for (int x = 0; x < GridSize; x++)
+        //{
+        //    for (int z = 0; z < GridSize; z++)
+        //    {
+        //        try
+        //        {
+        //            if (VertexAvailability[x, z])
+        //            {
+        //                // DIAGONAL DIREITA
+        //                Vector3 a = transform.position + VertexPositions[x, z];
+        //                Vector3 b = transform.position + VertexPositions[z, x];
+        //                Gizmos.DrawLine(a, b);
+        //                // DIAGONAL ESQUERDA
+        //                Vector3 c = transform.position + VertexPositions[x, z];
+        //                Vector3 d = transform.position + VertexPositions[x + 1, z + 1];
+        //                Gizmos.DrawLine(c, d);
+        //            }
+        //        }
+        //        catch (IndexOutOfRangeException)
+        //        {
+        //            z = GridSize;
+        //        }
+        //    }
+        //}
+
+    }
+
+
+    public void printGrid()
+    {
+        string matrix = "(";
+        for (int i = 0; i < GridSize; i++)
+        {
+            matrix += "[";
+            for (int j = 0; j < GridSize; j++)
+            {
+                matrix += GetVertexPosition(i, j);//VertexAvailability[i, j] + " ";
+            }
+            matrix += "]";
+        }
+        matrix += ")";
+        Debug.Log(matrix);
+    }
+
+    internal void Teste()
+    {
+        Vector3 position = transform.position - new Vector3(4, 0.0f, 8);
+        UpdateVertexPosition(0,position);
+        //Gizmos.color = Color.red;
+        //Gizmos.DrawSphere(position, 0.25f);
     }
 }
